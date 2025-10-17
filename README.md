@@ -83,7 +83,7 @@ psor_platform/
 ├── reports/
 │   └── audit.log            # The main audit trail file (generated on run)
 ├── requirements.txt       # Main UI Server Python dependencies
-├── run_ci.sh              # Local CI/CD simulation script (uses docker compose)
+├── run_ci.sh              # Local CI/CD script (uses docker compose)
 └── templates/
     └── unified_ui.html    # The main single-page-application (SPA) frontend
 ```
