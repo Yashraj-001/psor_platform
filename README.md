@@ -129,7 +129,7 @@ Navigate to 👉 [http://localhost:5000](http://localhost:5000)
 
 ### 3️⃣ Run via the Local CI/CD Script
 
-This simulates the CI process and runs the default playbook — perfect for quick CLI testing.
+This runs the CI process and runs the default playbook — perfect for quick CLI testing.
 
 **Make script executable:**
 
@@ -165,7 +165,7 @@ python3 adapters/siem_listener.py
 
 The adapter will start listening on **port 5001**.
 
-**Simulate a SIEM Alert:**
+**A SIEM Alert:**
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
