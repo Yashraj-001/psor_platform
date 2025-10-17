@@ -1,11 +1,8 @@
-# This is the professional, production-grade CI/CD pipeline for the PSOR project.
-# It uses GitHub Actions to automate the entire build and test process.
+# Professional, production-grade CI/CD pipeline for the PSOR project
+# Updated to use Docker Compose plugin (docker compose) on ubuntu-latest
 name: PSOR CI/CD Pipeline
 
 # --- TRIGGERS ---
-# This pipeline automatically runs on:
-# 1. Any push to the 'main' or 'master' branch.
-# 2. Any pull request targeting the 'main' or 'master' branch.
 on:
   push:
     branches: [ "main", "master" ]
@@ -13,70 +10,49 @@ on:
     branches: [ "main", "master" ]
 
 # --- JOBS ---
-# A workflow is made up of one or more jobs that run in parallel or sequentially.
 jobs:
-  # The primary job for building and testing the entire polyglot application.
   build-and-test:
-    # Use the latest GitHub-hosted Ubuntu runner, which includes Docker.
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the repository code
-      # This downloads your source code into the runner environment.
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # Step 2: Set up Docker Buildx
-      # This is a modern best practice that enables more advanced Docker features.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Build all services
-      # This command reads the docker-compose.yml and builds all defined services
-      # (orchestrator, python, java, rust, and js plugins). It will fail the
-      # entire pipeline if any service fails to build.
+      # Step 3: Build all services using modern Docker Compose plugin
       - name: Build All Polyglot Services
-        run: docker-compose build
+        run: docker compose build
 
-      # Step 4: Prepare for test run
-      # Ensure the reports directory exists and is clean before the run.
+      # Step 4: Prepare test artifact directory
       - name: Prepare Test Artifact Directory
         run: mkdir -p ./reports && rm -f ./reports/*
 
-      # Step 5: Run the Orchestration Test Playbook
-      # This executes the core integration test by running the orchestrator.
-      # IMPORTANT: We expect this step to fail (return a non-zero exit code)
-      # because our test playbook intentionally triggers a failure to test rollbacks.
-      # 'continue-on-error: true' ensures the workflow doesn't stop here,
-      # so we can proceed to the next step and upload our logs.
+      # Step 5: Run the orchestration test playbook
       - name: Run Orchestration Test Playbook
-        id: playbook-run # Give this step an ID to check its outcome later
+        id: playbook-run
         continue-on-error: true
-        run: docker-compose run --rm orchestrator
+        run: docker compose run --rm orchestrator
 
       # Step 6: Check the outcome of the playbook run
-      # This is an advanced step. It checks if the playbook run failed for the
-      # *expected* reason (exit code 1). If it fails for another reason, or
-      # unexpectedly succeeds, this step will fail the build.
       - name: Verify Expected Playbook Failure
         if: steps.playbook-run.outcome == 'failure' && steps.playbook-run.outputs.exit_code == 1
         run: echo "Playbook failed as expected. This is a successful test run."
+
       - name: Fail if Playbook Did Not Behave as Expected
         if: steps.playbook-run.outcome != 'failure' || steps.playbook-run.outputs.exit_code != 1
         run: |
           echo "::error::The test playbook was expected to fail with exit code 1, but it did not."
           echo "Outcome was '${{ steps.playbook-run.outcome }}' with exit code '${{ steps.playbook-run.outputs.exit_code }}'."
           exit 1
-          
-      # Step 7: Upload Audit Log and Reports as an Artifact
-      # This step ALWAYS runs, regardless of whether the previous steps passed or failed.
-      # It takes the 'reports' directory (containing audit.log and UI files) and
-      # saves it as a downloadable .zip file in the GitHub Actions run summary.
-      # This is crucial for debugging and auditing.
+
+      # Step 7: Upload audit log and reports
       - name: Upload Execution Report and Audit Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: PSOR-Execution-Report
           path: ./reports/
-
