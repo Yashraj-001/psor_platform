@@ -31,22 +31,25 @@ jobs:
       - name: Prepare Test Artifact Directory
         run: mkdir -p ./reports && rm -f ./reports/*
 
-      # Step 5: Run the orchestration test playbook
+      # Step 5: Run the orchestration test playbook and capture exit code
       - name: Run Orchestration Test Playbook
         id: playbook-run
         continue-on-error: true
-        run: docker compose run --rm orchestrator
+        run: |
+          docker compose run --rm orchestrator
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
 
-      # Step 6: Check the outcome of the playbook run
+      # Step 6a: Verify expected playbook failure
       - name: Verify Expected Playbook Failure
-        if: steps.playbook-run.outcome == 'failure' && steps.playbook-run.outputs.exit_code == 1
+        if: steps.playbook-run.outputs.exit_code == '1'
         run: echo "Playbook failed as expected. This is a successful test run."
 
+      # Step 6b: Fail if playbook did not behave as expected
       - name: Fail if Playbook Did Not Behave as Expected
-        if: steps.playbook-run.outcome != 'failure' || steps.playbook-run.outputs.exit_code != 1
+        if: steps.playbook-run.outputs.exit_code != '1'
         run: |
           echo "::error::The test playbook was expected to fail with exit code 1, but it did not."
-          echo "Outcome was '${{ steps.playbook-run.outcome }}' with exit code '${{ steps.playbook-run.outputs.exit_code }}'."
+          echo "Exit code was '${{ steps.playbook-run.outputs.exit_code }}'."
           exit 1
 
       # Step 7: Upload audit log and reports
