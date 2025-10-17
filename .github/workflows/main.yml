@@ -1,15 +1,12 @@
-# Professional, production-grade CI/CD pipeline for the PSOR project
-# Fully modernized for Docker Compose plugin and robust exit code handling
+# PSOR CI/CD Pipeline (Updated)
 name: PSOR CI/CD Pipeline
 
-# --- TRIGGERS ---
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
 
-# --- JOBS ---
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -23,8 +20,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Build all services and plugins explicitly
-      - name: Build All Polyglot Services and Plugins
+      # Step 3: Build all services and plugins with explicit image names
+      - name: Build All Services and Plugins
         run: |
           docker compose build orchestrator
           docker compose build plugin-python-revoke-key
@@ -39,7 +36,7 @@ jobs:
       - name: Prepare Test Artifact Directory
         run: mkdir -p ./reports && rm -f ./reports/*
 
-      # Step 5: Run the orchestration test playbook and capture exit code
+      # Step 5: Run orchestration playbook and capture exit code
       - name: Run Orchestration Test Playbook
         id: playbook-run
         continue-on-error: true
@@ -51,7 +48,7 @@ jobs:
       # Step 6a: Verify expected playbook failure
       - name: Verify Expected Playbook Failure
         if: steps.playbook-run.outputs.exit_code == '1'
-        run: echo "Playbook failed as expected. This is a successful test run."
+        run: echo "Playbook failed as expected. Successful test run."
 
       # Step 6b: Fail if playbook did not behave as expected
       - name: Fail if Playbook Did Not Behave as Expected

@@ -1,5 +1,5 @@
 # Docker Compose configuration for PSOR project
-# Modernized for Docker Compose plugin, no obsolete 'version' key
+# Modernized: explicit image tags for all plugins
 
 services:
   orchestrator:
@@ -15,29 +15,35 @@ services:
     build:
       context: ./plugins/python-sdk
       dockerfile: revoke-iam-key/Dockerfile
+    image: psor_platform_plugin-python-revoke-key
 
   plugin-java-block-ip:
     build:
       context: ./plugins/java-sdk
       dockerfile: block-ip-address/Dockerfile
+    image: psor_platform_plugin-java-block-ip
 
   plugin-rust-isolate-endpoint:
     build:
       context: ./plugins/rust-sdk
       dockerfile: isolate-endpoint/Dockerfile
+    image: psor_platform_plugin-rust-isolate-endpoint
 
   plugin-java-unblock-ip:
     build:
       context: ./plugins/java-sdk
       dockerfile: unblock-ip-address/Dockerfile
+    image: psor_platform_plugin-java-unblock-ip
 
   plugin-rust-unisolate-endpoint:
     build:
       context: ./plugins/rust-sdk
       dockerfile: unisolate-endpoint/Dockerfile
+    image: psor_platform_plugin-rust-unisolate-endpoint
 
-  # Uncomment and add JS plugin if needed
+  # Optional JS plugin
   # plugin-js-log-message:
   #   build:
   #     context: ./plugins/js-sdk
   #     dockerfile: log-message/Dockerfile
+  #   image: psor_platform_plugin-js-log-message
