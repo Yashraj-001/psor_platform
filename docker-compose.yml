@@ -1,4 +1,5 @@
-version: '3.8'
+# Docker Compose configuration for PSOR project
+# Modernized for Docker Compose plugin, no obsolete 'version' key
 
 services:
   orchestrator:
@@ -12,18 +13,18 @@ services:
 
   plugin-python-revoke-key:
     build:
-      context: ./plugins/python-sdk # Set context one level up
-      dockerfile: revoke-iam-key/Dockerfile # Specify Dockerfile location
+      context: ./plugins/python-sdk
+      dockerfile: revoke-iam-key/Dockerfile
 
   plugin-java-block-ip:
     build:
-      context: ./plugins/java-sdk # Set context one level up
-      dockerfile: block-ip-address/Dockerfile # Specify Dockerfile location
+      context: ./plugins/java-sdk
+      dockerfile: block-ip-address/Dockerfile
 
   plugin-rust-isolate-endpoint:
     build:
-      context: ./plugins/rust-sdk # Set context one level up
-      dockerfile: isolate-endpoint/Dockerfile # Specify Dockerfile location
+      context: ./plugins/rust-sdk
+      dockerfile: isolate-endpoint/Dockerfile
 
   plugin-java-unblock-ip:
     build:
@@ -35,7 +36,7 @@ services:
       context: ./plugins/rust-sdk
       dockerfile: unisolate-endpoint/Dockerfile
 
-  # Add the JS plugin definition here if you added it previously
+  # Uncomment and add JS plugin if needed
   # plugin-js-log-message:
   #   build:
   #     context: ./plugins/js-sdk

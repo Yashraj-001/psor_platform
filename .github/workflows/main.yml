@@ -1,5 +1,5 @@
 # Professional, production-grade CI/CD pipeline for the PSOR project
-# Updated to use Docker Compose plugin (docker compose) on ubuntu-latest
+# Fully modernized for Docker Compose plugin and robust exit code handling
 name: PSOR CI/CD Pipeline
 
 # --- TRIGGERS ---
@@ -23,9 +23,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Build all services using modern Docker Compose plugin
-      - name: Build All Polyglot Services
-        run: docker compose build
+      # Step 3: Build all services and plugins explicitly
+      - name: Build All Polyglot Services and Plugins
+        run: |
+          docker compose build orchestrator
+          docker compose build plugin-python-revoke-key
+          docker compose build plugin-java-block-ip
+          docker compose build plugin-rust-isolate-endpoint
+          docker compose build plugin-java-unblock-ip
+          docker compose build plugin-rust-unisolate-endpoint
+          # Uncomment if JS plugin is added
+          # docker compose build plugin-js-log-message
 
       # Step 4: Prepare test artifact directory
       - name: Prepare Test Artifact Directory
@@ -36,6 +44,7 @@ jobs:
         id: playbook-run
         continue-on-error: true
         run: |
+          set +e
           docker compose run --rm orchestrator
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
