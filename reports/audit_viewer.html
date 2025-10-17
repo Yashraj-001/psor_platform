@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSOR Audit Log Viewer</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; background-color: #f4f4f4; }
+        #logContainer { 
+            background-color: #fff; 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+            word-wrap: break-word; /* Break long words */
+            max-height: 80vh; 
+            overflow-y: auto; 
+            font-family: monospace; /* Use a fixed-width font */
+            font-size: 0.9em;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .log-level-INFO { color: #333; }
+        .log-level-WARNI { color: #e67e22; font-weight: bold; } /* Corrected WARN */
+        .log-level-ERROR { color: #c0392b; font-weight: bold; }
+        .log-level-CRITI { color: #c0392b; font-weight: bold; background-color: #fdd; } /* Corrected CRITICAL */
+        .timestamp { color: #7f8c8d; margin-right: 10px;}
+    </style>
+</head>
+<body>
+    <h1>PSOR - Audit Log Viewer 📜</h1>
+    <p>Displaying contents of <code>audit.log</code>:</p>
+    <div id="logContainer">Loading log file...</div>
+
+    <script>
+        // Function to fetch and display the log file
+        async function fetchLogFile() {
+            const logContainer = document.getElementById('logContainer');
+            try {
+                // Fetch the log file (relative path)
+                const response = await fetch('audit.log'); 
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const logText = await response.text();
+                
+                // Clear the loading message
+                logContainer.innerHTML = ''; 
+
+                // Split into lines and add styled spans
+                logText.split('\n').forEach(line => {
+                    if (line.trim() === '') return; // Skip empty lines
+
+                    const entryDiv = document.createElement('div');
+                    entryDiv.classList.add('log-entry');
+
+                    // Basic parsing to style levels (adjust regex if format changes)
+                    const match = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(INFO |WARNI|ERROR|CRITI)\]\s*(.*)$/);
+                    
+                    if (match) {
+                        const timestamp = match[1];
+                        const level = match[2].trim();
+                        const message = match[3];
+
+                        const timeSpan = document.createElement('span');
+                        timeSpan.classList.add('timestamp');
+                        timeSpan.textContent = `[${timestamp}]`;
+
+                        const levelSpan = document.createElement('span');
+                        levelSpan.classList.add(`log-level-${level}`); // Add class based on level
+                        levelSpan.textContent = `[${level}] `;
+                        
+                        const messageSpan = document.createElement('span');
+                        messageSpan.textContent = message;
+
+                        entryDiv.appendChild(timeSpan);
+                        entryDiv.appendChild(levelSpan);
+                        entryDiv.appendChild(messageSpan);
+                    } else {
+                        // If parsing fails, just display the raw line
+                        entryDiv.textContent = line;
+                    }
+                    logContainer.appendChild(entryDiv);
+                });
+
+            } catch (error) {
+                logContainer.textContent = `Error loading log file: ${error}. Make sure the log file exists and the web server can access it.`;
+                console.error('Error fetching log:', error);
+            }
+        }
+
+        // Fetch the log when the page loads
+        fetchLogFile();
+    </script>
+</body>
+</html>

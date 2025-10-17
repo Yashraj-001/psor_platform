@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSOR - Real-time Pipeline Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        :root {
+            --color-bg: #1a1a2e; --color-surface: #16213e; --color-primary: #0f3460;
+            --color-secondary: #e94560; --color-text: #dcdcdc; --color-success: #2ecc71;
+            --color-warning: #f39c12; --color-error: #e74c3c;
+            --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            --font-mono: 'Consolas', 'Monaco', monospace;
+        }
+        body { font-family: var(--font-main); background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: var(--color-surface); padding: 2rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        h1 { color: #fff; border-bottom: 2px solid var(--color-secondary); padding-bottom: 0.5rem; margin-top: 0; }
+        #run-btn { padding: 1rem; font-size: 1.2rem; font-weight: bold; color: #fff; background-color: var(--color-secondary); border: none; border-radius: 4px; cursor: pointer; margin-bottom: 1rem; transition: background-color 0.2s ease; }
+        #run-btn:hover { background-color: #c93049; }
+        #run-btn:disabled { background-color: #555; cursor: not-allowed; }
+        #status { font-weight: bold; margin-bottom: 1rem; padding: 10px; border-radius: 4px; background-color: var(--color-primary); }
+        #log-output { height: 70vh; background-color: #000; color: #fff; font-family: var(--font-mono); font-size: 13px; border: 1px solid var(--color-primary); border-radius: 4px; padding: 1rem; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
+        .log-line { margin-bottom: 3px; }
+        .ansi-bright-black-fg { color: #7f8c8d; } .ansi-red-fg { color: #e74c3c; } .ansi-bright-red-fg { color: #e74c3c; font-weight: bold; }
+        .ansi-green-fg { color: #2ecc71; } .ansi-bright-green-fg { color: #2ecc71; font-weight: bold; }
+        .ansi-yellow-fg { color: #f39c12; } .ansi-bright-yellow-fg { color: #f39c12; font-weight: bold; }
+        .ansi-blue-fg { color: #3498db; } .ansi-bright-blue-fg { color: #3498db; font-weight: bold; }
+        .ansi-magenta-fg { color: #9b59b6; } .ansi-bright-magenta-fg { color: #9b59b6; font-weight: bold; }
+        .ansi-cyan-fg { color: #1abc9c; } .ansi-bright-cyan-fg { color: #1abc9c; font-weight: bold; }
+        .ansi-white-fg { color: #dcdcdc; } .ansi-bright-white-fg { color: #ffffff; font-weight: bold;}
+    </style>
+    <script src="https://unpkg.com/ansi_up@5.1.0/ansi_up.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>PSOR - Real-time Pipeline Viewer 🚀</h1>
+    <button id="run-btn">▶️ Run CI/CD Pipeline</button>
+    <div id="status">Status: Idle</div>
+    <h3>Live Output:</h3>
+    <div id="log-output"><pre>Click 'Run Pipeline' to start...</pre></div>
+</div>
+
+<script>
+    const socket = io();
+    const runBtn = document.getElementById('run-btn');
+    const statusDiv = document.getElementById('status');
+    const logOutputDiv = document.getElementById('log-output');
+    const ansi_up = new AnsiUp();
+
+    socket.on('pipeline_log', (data) => {
+        const logLine = document.createElement('div');
+        logLine.classList.add('log-line');
+        logLine.innerHTML = ansi_up.ansi_to_html(data.log); 
+        logOutputDiv.appendChild(logLine);
+        logOutputDiv.scrollTop = logOutputDiv.scrollHeight; 
+    });
+
+    socket.on('status_update', (data) => {
+        statusDiv.textContent = `Status: ${data.status}`;
+        if (data.status.startsWith('Pipeline Finished')) {
+            runBtn.disabled = false;
+        } else {
+             runBtn.disabled = true;
+        }
+    });
+    
+    socket.on('clear_logs', () => {
+        logOutputDiv.innerHTML = '';
+    });
+
+    socket.on('connect', () => {
+        statusDiv.textContent = 'Status: Connected to server. Idle.';
+        runBtn.disabled = false;
+    });
+    socket.on('disconnect', () => {
+        statusDiv.textContent = 'Status: Disconnected from server!';
+        runBtn.disabled = true;
+    });
+    socket.on('connect_error', (err) => {
+        statusDiv.textContent = `Status: Connection Error! ${err.message}`;
+        runBtn.disabled = true;
+    });
+
+    runBtn.addEventListener('click', async () => {
+        runBtn.disabled = true;
+        statusDiv.textContent = 'Status: Sending run request...';
+        try {
+            const response = await fetch('/run', { method: 'POST' });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || `HTTP error ${response.status}`);
+            }
+            statusDiv.textContent = `Status: ${result.message}`;
+        } catch (error) {
+            statusDiv.textContent = `Status: Error starting pipeline: ${error.message}`;
+            runBtn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSOR - Unified Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://unpkg.com/ansi_up@5.1.0/ansi_up.js"></script>
+    <style>
+        :root { /* Shared dark theme */
+            --color-bg: #1a1a2e; --color-surface: #16213e; --color-primary: #0f3460;
+            --color-secondary: #e94560; --color-text: #dcdcdc; --color-success: #2ecc71;
+            --color-warning: #f39c12; --color-error: #e74c3c; --color-info: #3498db;
+            --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            --font-mono: 'Consolas', 'Monaco', monospace;
+        }
+        body { font-family: var(--font-main); background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 2rem; }
+        .container { max-width: 1400px; margin: 0 auto; background-color: var(--color-surface); padding: 2rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        h1 { color: #fff; border-bottom: 2px solid var(--color-secondary); padding-bottom: 0.5rem; margin-top: 0; }
+        .tabs { display: flex; border-bottom: 1px solid var(--color-primary); margin-bottom: 1.5rem; }
+        .tab-button { background: none; border: none; padding: 1rem 1.5rem; cursor: pointer; color: var(--color-text); font-size: 1rem; border-bottom: 3px solid transparent; }
+        .tab-button.active { color: #fff; border-bottom-color: var(--color-secondary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        button { padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: bold; color: #fff; background-color: var(--color-secondary); border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s ease; }
+        button:hover { background-color: #c93049; }
+        button:disabled { background-color: #555; cursor: not-allowed; }
+        select, textarea { background-color: var(--color-primary); color: var(--color-text); border: 1px solid #0f3460; border-radius: 4px; padding: 0.8rem; font-family: var(--font-mono); font-size: 14px; margin-bottom: 1rem; }
+        /* Runner Tab */
+        #status { font-weight: bold; margin: 1rem 0; padding: 10px; border-radius: 4px; background-color: var(--color-primary); }
+        #log-output { height: 65vh; background-color: #000; color: #fff; font-family: var(--font-mono); font-size: 13px; border: 1px solid var(--color-primary); border-radius: 4px; padding: 1rem; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
+        .log-line { margin-bottom: 3px; }
+        /* Validator Tab */
+        .editor-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        #playbook-editor { width: 100%; height: 60vh; box-sizing: border-box; }
+        #results-container { background-color: var(--color-primary); padding: 1rem; height: 60vh; overflow-y: auto; font-size: 13px; border-radius: 4px; }
+        .result { padding: 0.75rem; margin-bottom: 0.5rem; border-left: 4px solid; border-radius: 2px; }
+        .result.success { border-color: var(--color-success); background-color: rgba(46, 204, 113, 0.1); }
+        .result.warning { border-color: var(--color-warning); background-color: rgba(243, 156, 18, 0.1); }
+        .result.error { border-color: var(--color-error); background-color: rgba(231, 76, 60, 0.1); }
+        .result.info { border-color: var(--color-info); background-color: rgba(52, 152, 219, 0.1); }
+        .result-title { font-weight: bold; }
+        /* Audit History Tab */
+        #audit-log-history { height: 75vh; background-color: #000; color: #fff; font-family: var(--font-mono); font-size: 13px; border: 1px solid var(--color-primary); border-radius: 4px; padding: 1rem; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
+        /* ANSI colors - same as before */
+        .ansi-bright-black-fg { color: #7f8c8d; } .ansi-red-fg { color: #e74c3c; } .ansi-bright-red-fg { color: #e74c3c; font-weight: bold; } .ansi-green-fg { color: #2ecc71; } .ansi-bright-green-fg { color: #2ecc71; font-weight: bold; } .ansi-yellow-fg { color: #f39c12; } .ansi-bright-yellow-fg { color: #f39c12; font-weight: bold; } .ansi-blue-fg { color: #3498db; } .ansi-bright-blue-fg { color: #3498db; font-weight: bold; } .ansi-magenta-fg { color: #9b59b6; } .ansi-bright-magenta-fg { color: #9b59b6; font-weight: bold; } .ansi-cyan-fg { color: #1abc9c; } .ansi-bright-cyan-fg { color: #1abc9c; font-weight: bold; } .ansi-white-fg { color: #dcdcdc; } .ansi-bright-white-fg { color: #ffffff; font-weight: bold;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>PSOR - Unified Dashboard ✨</h1>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'runner')">Pipeline Runner</button>
+        <button class="tab-button" onclick="openTab(event, 'validator')">Playbook Validator</button>
+        <button class="tab-button" onclick="openTab(event, 'audit')">Audit Log History</button>
+    </div>
+
+    <div id="runner" class="tab-content active">
+        <h2>Run & Monitor Playbook</h2>
+        <div>
+            <label for="playbook-select">Select Playbook:</label>
+            <select id="playbook-select" style="margin-right: 10px;"></select>
+            <button id="run-btn">▶️ Run Selected Playbook</button>
+        </div>
+        <div id="status">Status: Idle</div>
+        <h3>Live Output:</h3>
+        <div id="log-output"><pre>Click 'Run Selected Playbook' to start...</pre></div>
+    </div>
+
+    <div id="validator" class="tab-content">
+        <h2>Validate Playbook Safety & Syntax</h2>
+        <p>Paste your YAML playbook below to validate it against orchestration safety policies.</p>
+        <div class="editor-container">
+            <div>
+                <h3>Playbook Editor</h3>
+                <textarea id="playbook-editor" placeholder="Paste your playbook YAML here..."></textarea>
+                 <button id="validate-btn">Validate Playbook</button>
+            </div>
+            <div>
+                <h3>Validation Results</h3>
+                <div id="results-container"><p>Results will appear here.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="audit" class="tab-content">
+        <h2>View Audit Log History</h2>
+        <button id="refresh-audit-btn">Refresh Audit Log</button>
+        <div id="audit-log-history"><pre>Loading audit log...</pre></div>
+    </div>
+
+</div>
+
+<script>
+    const socket = io();
+    const ansi_up = new AnsiUp(); 
+    
+    // --- Global Elements ---
+    const runBtn = document.getElementById('run-btn');
+    const statusDiv = document.getElementById('status');
+    const logOutputDiv = document.getElementById('log-output');
+    const playbookSelect = document.getElementById('playbook-select');
+    const validateBtn = document.getElementById('validate-btn');
+    const editor = document.getElementById('playbook-editor');
+    const resultsContainer = document.getElementById('results-container');
+    const refreshAuditBtn = document.getElementById('refresh-audit-btn');
+    const auditLogHistoryDiv = document.getElementById('audit-log-history');
+
+    // --- Tab Switching Logic ---
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+        
+        // Load audit log when tab is opened
+        if (tabName === 'audit') {
+            fetchAuditLog();
+        }
+        // Populate playbook dropdown when runner tab is opened
+        if (tabName === 'runner') {
+             populatePlaybookSelector();
+        }
+    }
+
+    // --- Runner Tab Logic ---
+    socket.on('pipeline_log', (data) => {
+        const logLine = document.createElement('div');
+        logLine.classList.add('log-line');
+        logLine.innerHTML = ansi_up.ansi_to_html(data.log); 
+        logOutputDiv.appendChild(logLine);
+        logOutputDiv.scrollTop = logOutputDiv.scrollHeight; 
+    });
+    socket.on('status_update', (data) => {
+        statusDiv.textContent = `Status: ${data.status}`;
+        if (data.status.startsWith('Playbook Finished')) { runBtn.disabled = false; } 
+        else { runBtn.disabled = true; }
+    });
+    socket.on('clear_logs', () => { logOutputDiv.innerHTML = ''; });
+    socket.on('connect', () => { statusDiv.textContent = 'Status: Connected. Idle.'; runBtn.disabled = false; });
+    socket.on('disconnect', () => { statusDiv.textContent = 'Status: Disconnected!'; runBtn.disabled = true; });
+    socket.on('connect_error', (err) => { statusDiv.textContent = `Status: Connection Error! ${err.message}`; runBtn.disabled = true; });
+
+    runBtn.addEventListener('click', async () => {
+        runBtn.disabled = true;
+        statusDiv.textContent = 'Status: Sending run request...';
+        const selectedPlaybook = playbookSelect.value;
+        if (!selectedPlaybook) {
+            statusDiv.textContent = 'Status: Please select a playbook.';
+            runBtn.disabled = false;
+            return;
+        }
+        try {
+            const response = await fetch('/run_playbook', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playbook: selectedPlaybook }) 
+            });
+            const result = await response.json();
+            if (!response.ok) { throw new Error(result.message || `HTTP error ${response.status}`); }
+            statusDiv.textContent = `Status: ${result.message}`;
+        } catch (error) {
+            statusDiv.textContent = `Status: Error starting playbook: ${error.message}`;
+            runBtn.disabled = false;
+        }
+    });
+    
+    async function populatePlaybookSelector() {
+        try {
+            const response = await fetch('/playbooks_list');
+            if (!response.ok) throw new Error('Failed to fetch playbooks');
+            const playbooks = await response.json();
+            playbookSelect.innerHTML = ''; // Clear existing options
+            if (playbooks.length === 0) {
+                 playbookSelect.innerHTML = '<option value="">No playbooks found</option>';
+            } else {
+                playbooks.forEach(pb => {
+                    const option = document.createElement('option');
+                    option.value = pb;
+                    option.textContent = osPathBasename(pb); // Show only filename
+                    playbookSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+             playbookSelect.innerHTML = '<option value="">Error loading playbooks</option>';
+             console.error("Error populating playbooks:", error);
+        }
+    }
+    // Helper to get filename from path
+    function osPathBasename(path) { return path.split(/[\\/]/).pop(); }
+
+
+    // --- Validator Tab Logic ---
+    validateBtn.addEventListener('click', async () => {
+        const playbookYaml = editor.value;
+        resultsContainer.innerHTML = '<p>Validating...</p>'; 
+        try {
+             const response = await fetch('/validate_playbook', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/yaml' }, // Send as YAML
+                 body: playbookYaml
+             });
+             if (!response.ok) { throw new Error(`Validation request failed: ${response.statusText}`); }
+             const validationResults = await response.json();
+             resultsContainer.innerHTML = ''; // Clear loading message
+             validationResults.forEach(res => addValidationResult(res.type, res.title, res.message));
+        } catch (error) {
+             resultsContainer.innerHTML = '';
+             addValidationResult('error', 'Validation Request Error', error.message);
+        }
+    });
+
+    function addValidationResult(type, title, message) {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `result ${type}`;
+        let icon = '';
+        if (type === 'success') icon = '✅ ';
+        if (type === 'warning') icon = '⚠️ ';
+        if (type === 'error') icon = '❌ ';
+        if (type === 'info') icon = 'ℹ️ ';
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'result-title';
+        titleSpan.textContent = `${icon}[${type.toUpperCase()}] ${title}`;
+        const messageP = document.createElement('p');
+        messageP.textContent = message;
+        messageP.style.margin = '0.5rem 0 0 0';
+        resultDiv.appendChild(titleSpan);
+        resultDiv.appendChild(messageP);
+        resultsContainer.appendChild(resultDiv);
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+    }
+     // Pre-fill validator editor (example)
+     editor.value = `name: "Sample Playbook for Validation"\nsafety_policies:\n  - name: "critical_asset_check"\n    type: "do_not_isolate"\n    targets:\n      - "endpoint-db-01"\nsteps:\n  - name: "Isolate critical DB (Unsafe)"\n    plugin: "psor_platform_plugin-rust-isolate-endpoint"\n    parameters:\n      endpoint_id: "endpoint-db-01"\n`;
+
+    // --- Audit Log History Tab Logic ---
+    async function fetchAuditLog() {
+        auditLogHistoryDiv.innerHTML = '<pre>Loading audit log...</pre>';
+        try {
+            const response = await fetch('/audit_log');
+            if (!response.ok) { throw new Error(`HTTP error ${response.status} - ${response.statusText}`); }
+            const logText = await response.text();
+            // Simple display for history, could add ANSI parsing here too if needed
+            auditLogHistoryDiv.innerHTML = `<pre>${logText}</pre>`; 
+        } catch (error) {
+             auditLogHistoryDiv.innerHTML = `<pre>Error loading audit log: ${error.message}</pre>`;
+             console.error("Error fetching audit log:", error);
+        }
+    }
+    refreshAuditBtn.addEventListener('click', fetchAuditLog);
+
+    // --- Initial Setup ---
+    document.addEventListener('DOMContentLoaded', () => {
+        openTab({ currentTarget: document.querySelector('.tab-button.active') }, 'runner'); // Open runner tab by default
+    });
+
+</script>
+</body>
+</html>

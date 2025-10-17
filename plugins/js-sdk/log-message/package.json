@@ -1,0 +1,10 @@
+{
+  "name": "log-message-plugin",
+  "version": "1.0.0",
+  "description": "PSOR Log Message Plugin",
+  "main": "plugin.js",
+  "private": true,
+  "dependencies": {
+    "psor-sdk-lib": "file:../psor-sdk-lib"
+  }
+}

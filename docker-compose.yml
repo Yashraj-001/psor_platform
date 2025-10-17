@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  orchestrator:
+    build: ./orchestrator
+    working_dir: /app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./playbooks:/app/playbooks:ro
+      - ./reports:/app/reports:rw
+      - ./plugins:/app/plugins:ro
+
+  plugin-python-revoke-key:
+    build:
+      context: ./plugins/python-sdk # Set context one level up
+      dockerfile: revoke-iam-key/Dockerfile # Specify Dockerfile location
+
+  plugin-java-block-ip:
+    build:
+      context: ./plugins/java-sdk # Set context one level up
+      dockerfile: block-ip-address/Dockerfile # Specify Dockerfile location
+
+  plugin-rust-isolate-endpoint:
+    build:
+      context: ./plugins/rust-sdk # Set context one level up
+      dockerfile: isolate-endpoint/Dockerfile # Specify Dockerfile location
+
+  plugin-java-unblock-ip:
+    build:
+      context: ./plugins/java-sdk
+      dockerfile: unblock-ip-address/Dockerfile
+
+  plugin-rust-unisolate-endpoint:
+    build:
+      context: ./plugins/rust-sdk
+      dockerfile: unisolate-endpoint/Dockerfile
+
+  # Add the JS plugin definition here if you added it previously
+  # plugin-js-log-message:
+  #   build:
+  #     context: ./plugins/js-sdk
+  #     dockerfile: log-message/Dockerfile

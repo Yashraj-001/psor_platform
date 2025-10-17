@@ -1,0 +1,48 @@
+name: "Remediate Compromised Host and Leaked Credentials"
+description: "Triggered by Sigma Rule 'XYZ'. Isolates host, blocks C2 IP, and revokes leaked IAM key."
+
+# Safety policies are checked by the orchestrator BEFORE running the plugin.
+# This prevents catastrophic mistakes.
+safety_policies:
+  - name: "critical_asset_check"
+    type: "do_not_isolate"
+    targets:
+      - "endpoint-db-01" # Never isolate the production database server
+  - name: "corporate_ip_check"
+    type: "do_not_block"
+    targets:
+      - "8.8.8.8" # Never block Google DNS
+      - "1.1.1.1" # Never block Cloudflare DNS
+
+# The sequence of remediation steps.
+steps:
+  - name: "Isolate compromised endpoint"
+    plugin: "psor_platform_plugin-rust-isolate-endpoint" # Matches the built image name
+    parameters:
+      endpoint_id: "endpoint-web-34"
+    on_failure: "stop"
+
+  - name: "Block malicious C2 IP address"
+    plugin: "psor_platform_plugin-java-block-ip"
+    parameters:
+      ip_address: "198.51.100.23" # A malicious IP
+      port: "443"
+    on_failure: "continue"
+
+  - name: "Attempt to block a safe-listed corporate IP (This will be blocked by policy)"
+    plugin: "psor_platform_plugin-java-block-ip"
+    parameters:
+      ip_address: "8.8.8.8"
+    on_failure: "continue"
+
+  - name: "Revoke compromised AWS IAM key"
+    plugin: "psor_platform_plugin-python-revoke-key"
+    parameters:
+      key_id: "AKIAIOSFODNN7EXAMPLE"
+    on_failure: "stop"
+
+  - name: "Simulate a failing plugin to test rollback"
+    plugin: "psor_platform_plugin-python-revoke-key"
+    parameters:
+      key_id: "FAIL" # This special keyword will cause the plugin to fail
+    on_failure: "stop"

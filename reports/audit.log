@@ -1,0 +1,52 @@
+2025-10-17 11:25:48,767 [INFO ]  Successfully loaded playbook: Remediate Compromised Host and Leaked Credentials
+2025-10-17 11:25:48,767 [INFO ]  Starting playbook execution...
+2025-10-17 11:25:48,768 [INFO ]  --- Starting Step 1: Isolate compromised endpoint ---
+2025-10-17 11:25:48,768 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:25:48,768 [INFO ]  Executing plugin 'psor_platform_plugin-rust-isolate-endpoint' with params: ['endpoint_id=endpoint-web-34']
+2025-10-17 11:25:49,066 [INFO ]  [PLUGIN_OUTPUT] {'status': 'success', 'message': "Successfully submitted network isolation request for endpoint 'endpoint-web-34'.", 'details': {'endpoint_id': 'endpoint-web-34'}}
+2025-10-17 11:25:49,066 [INFO ]  Step 'Isolate compromised endpoint' completed successfully.
+2025-10-17 11:25:49,066 [INFO ]  --- Starting Step 2: Block malicious C2 IP address ---
+2025-10-17 11:25:49,066 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:25:49,066 [INFO ]  Executing plugin 'psor_platform_plugin-java-block-ip' with params: ['ip_address=198.51.100.23', 'port=443']
+2025-10-17 11:25:49,480 [INFO ]  [PLUGIN_OUTPUT] {'status': 'success', 'message': "Successfully submitted block rule for IP address '198.51.100.23'.", 'details': {'port': '443', 'ip_address': '198.51.100.23'}}
+2025-10-17 11:25:49,481 [INFO ]  Step 'Block malicious C2 IP address' completed successfully.
+2025-10-17 11:25:49,481 [INFO ]  --- Starting Step 3: Attempt to block a safe-listed corporate IP (This will be blocked by policy) ---
+2025-10-17 11:25:49,481 [WARNI]  [SAFETY_CHECK_VIOLATION] Action BLOCKED. Attempted to block corporate IP: 8.8.8.8
+2025-10-17 11:25:49,481 [INFO ]  --- Starting Step 4: Revoke compromised AWS IAM key ---
+2025-10-17 11:25:49,481 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:25:49,481 [INFO ]  Executing plugin 'psor_platform_plugin-python-revoke-key' with params: ['key_id=AKIAIOSFODNN7EXAMPLE']
+2025-10-17 11:25:50,423 [INFO ]  [PLUGIN_OUTPUT] {'status': 'success', 'message': "Successfully submitted request to revoke IAM key 'AKIAIOSFODNN7EXAMPLE'.", 'details': {'key_id': 'AKIAIOSFODNN7EXAMPLE', 'jira_ticket': 'SEC-5148'}}
+2025-10-17 11:25:50,423 [INFO ]  Step 'Revoke compromised AWS IAM key' completed successfully.
+2025-10-17 11:25:50,423 [INFO ]  --- Starting Step 5: Simulate a failing plugin to test rollback ---
+2025-10-17 11:25:50,423 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:25:50,424 [INFO ]  Executing plugin 'psor_platform_plugin-python-revoke-key' with params: ['key_id=FAIL']
+2025-10-17 11:25:51,022 [ERROR]  Step 'Simulate a failing plugin to test rollback' FAILED with exit code 127. Error: 2025-10-17 11:25:50,904 [SDK:ERROR] Connection to AWS endpoint failed
+2025-10-17 11:25:51,023 [CRITI]  [ROLLBACK_PROCEDURE] Attempting rollback for failed step: 'Simulate a failing plugin to test rollback'
+2025-10-17 11:25:51,023 [WARNI]  No automatic rollback plugin defined for: psor_platform_plugin-python-revoke-key. Manual intervention likely required.
+2025-10-17 11:25:51,023 [ERROR]  Playbook execution halted due to 'on_failure: stop' policy.
+2025-10-17 11:26:43,099 [INFO ]  Successfully loaded playbook: Remediate Compromised Host and Leaked Credentials
+2025-10-17 11:26:43,099 [INFO ]  Starting playbook execution...
+2025-10-17 11:26:43,099 [INFO ]  --- Starting Step 1: Isolate compromised endpoint ---
+2025-10-17 11:26:43,099 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:26:43,099 [INFO ]  Executing plugin 'psor_platform_plugin-rust-isolate-endpoint' with params: ['endpoint_id=endpoint-web-34']
+2025-10-17 11:26:43,414 [INFO ]  [PLUGIN_OUTPUT] {'status': 'success', 'message': "Successfully submitted network isolation request for endpoint 'endpoint-web-34'.", 'details': {'endpoint_id': 'endpoint-web-34'}}
+2025-10-17 11:26:43,414 [INFO ]  Step 'Isolate compromised endpoint' completed successfully.
+2025-10-17 11:26:43,414 [INFO ]  --- Starting Step 2: Block malicious C2 IP address ---
+2025-10-17 11:26:43,414 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:26:43,414 [INFO ]  Executing plugin 'psor_platform_plugin-java-block-ip' with params: ['ip_address=198.51.100.23', 'port=443']
+2025-10-17 11:26:43,810 [INFO ]  [PLUGIN_OUTPUT] {'status': 'success', 'message': "Successfully submitted block rule for IP address '198.51.100.23'.", 'details': {'port': '443', 'ip_address': '198.51.100.23'}}
+2025-10-17 11:26:43,811 [INFO ]  Step 'Block malicious C2 IP address' completed successfully.
+2025-10-17 11:26:43,811 [INFO ]  --- Starting Step 3: Attempt to block a safe-listed corporate IP (This will be blocked by policy) ---
+2025-10-17 11:26:43,811 [WARNI]  [SAFETY_CHECK_VIOLATION] Action BLOCKED. Attempted to block corporate IP: 8.8.8.8
+2025-10-17 11:26:43,811 [INFO ]  --- Starting Step 4: Revoke compromised AWS IAM key ---
+2025-10-17 11:26:43,811 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:26:43,811 [INFO ]  Executing plugin 'psor_platform_plugin-python-revoke-key' with params: ['key_id=AKIAIOSFODNN7EXAMPLE']
+2025-10-17 11:26:44,623 [INFO ]  [PLUGIN_OUTPUT] {'status': 'success', 'message': "Successfully submitted request to revoke IAM key 'AKIAIOSFODNN7EXAMPLE'.", 'details': {'key_id': 'AKIAIOSFODNN7EXAMPLE', 'jira_ticket': 'SEC-3386'}}
+2025-10-17 11:26:44,623 [INFO ]  Step 'Revoke compromised AWS IAM key' completed successfully.
+2025-10-17 11:26:44,623 [INFO ]  --- Starting Step 5: Simulate a failing plugin to test rollback ---
+2025-10-17 11:26:44,623 [INFO ]  [SAFETY_CHECK_PASSED] Action is approved for execution.
+2025-10-17 11:26:44,623 [INFO ]  Executing plugin 'psor_platform_plugin-python-revoke-key' with params: ['key_id=FAIL']
+2025-10-17 11:26:45,189 [ERROR]  Step 'Simulate a failing plugin to test rollback' FAILED with exit code 127. Error: 2025-10-17 11:26:45,077 [SDK:ERROR] Connection to AWS endpoint failed
+2025-10-17 11:26:45,190 [CRITI]  [ROLLBACK_PROCEDURE] Attempting rollback for failed step: 'Simulate a failing plugin to test rollback'
+2025-10-17 11:26:45,190 [WARNI]  No automatic rollback plugin defined for: psor_platform_plugin-python-revoke-key. Manual intervention likely required.
+2025-10-17 11:26:45,190 [ERROR]  Playbook execution halted due to 'on_failure: stop' policy.

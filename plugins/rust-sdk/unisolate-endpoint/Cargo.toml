@@ -1,0 +1,9 @@
+[package]
+name = "unisolate-endpoint"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+psor-sdk-lib = { path = "../psor-sdk-lib" } # Relative path for workspace build
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

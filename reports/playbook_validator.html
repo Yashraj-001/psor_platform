@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSOR - Safe Playbook Validator</title>
+    <!-- Include the js-yaml library from a CDN for in-browser YAML parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <style>
+        :root {
+            --color-bg: #1a1a2e;
+            --color-surface: #16213e;
+            --color-primary: #0f3460;
+            --color-secondary: #e94560;
+            --color-text: #dcdcdc;
+            --color-success: #2ecc71;
+            --color-warning: #f39c12;
+            --color-error: #e74c3c;
+            --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            --font-mono: 'Consolas', 'Monaco', monospace;
+        }
+        body {
+            font-family: var(--font-main);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--color-surface);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #fff;
+            border-bottom: 2px solid var(--color-secondary);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        #playbook-editor {
+            width: 100%;
+            height: 60vh;
+            background-color: var(--color-primary);
+            color: var(--color-text);
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            box-sizing: border-box; /* Important for padding */
+        }
+        #validate-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: var(--color-secondary);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background-color 0.2s ease;
+        }
+        #validate-btn:hover {
+            background-color: #c93049;
+        }
+        #results-container {
+            background-color: var(--color-primary);
+            padding: 1rem;
+            height: 60vh;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        .result {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid;
+            border-radius: 2px;
+        }
+        .result.success {
+            border-color: var(--color-success);
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+        .result.warning {
+            border-color: var(--color-warning);
+            background-color: rgba(243, 156, 18, 0.1);
+        }
+        .result.error {
+            border-color: var(--color-error);
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        .result-title {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>PSOR - Safe Playbook Validator 🛡️</h1>
+    <p>Paste your YAML playbook below to validate its syntax and check it against the orchestration safety policies.</p>
+    
+    <div class="editor-container">
+        <div>
+            <h3>Playbook Editor</h3>
+            <textarea id="playbook-editor" placeholder="Paste your playbook YAML here..."></textarea>
+        </div>
+        <div>
+            <h3>Validation Results</h3>
+            <div id="results-container">
+                <p>Results will appear here after validation.</p>
+            </div>
+        </div>
+    </div>
+    <button id="validate-btn">Validate Playbook</button>
+</div>
+
+<script>
+// --- ADVANCED SAFETY ENGINE (CLIENT-SIDE) ---
+// In a real app, this would be fetched from a central policy API.
+const SAFETY_POLICIES = {
+    critical_asset_check: {
+        type: "do_not_isolate",
+        targets: ["endpoint-db-01", "endpoint-auth-svc"],
+        message: "Endpoint is a critical production asset."
+    },
+    corporate_ip_check: {
+        type: "do_not_block",
+        targets: ["8.8.8.8", "1.1.1.1", "208.67.222.222"],
+        message: "IP is a critical infrastructure service (e.g., public DNS)."
+    }
+};
+
+const validateBtn = document.getElementById('validate-btn');
+const editor = document.getElementById('playbook-editor');
+const resultsContainer = document.getElementById('results-container');
+
+// Pre-fill the editor with a sample playbook for demonstration
+editor.value = `name: "Sample Playbook for Validation"
+safety_policies:
+  - name: "critical_asset_check"
+    type: "do_not_isolate"
+    targets:
+      - "endpoint-db-01"
+  - name: "corporate_ip_check"
+    type: "do_not_block"
+    targets:
+      - "8.8.8.8"
+
+steps:
+  - name: "Isolate a normal endpoint (Safe)"
+    plugin: "psor_platform_plugin-rust-isolate-endpoint"
+    parameters:
+      endpoint_id: "endpoint-user-laptop-1138"
+  
+  - name: "Block a malicious IP (Safe)"
+    plugin: "psor_platform_plugin-java-block-ip"
+    parameters:
+      ip_address: "103.56.12.1"
+
+  - name: "ATTEMPT: Isolate a critical DB server (Unsafe)"
+    plugin: "psor_platform_plugin-rust-isolate-endpoint"
+    parameters:
+      endpoint_id: "endpoint-db-01"
+
+  - name: "ATTEMPT: Block a corporate DNS (Unsafe)"
+    plugin: "psor_platform_plugin-java-block-ip"
+    parameters:
+      ip_address: "8.8.8.8"
+
+  - name: "Revoke a key (No specific policy)"
+    plugin: "psor_platform_plugin-python-revoke-key"
+    parameters:
+      key_id: "AKIA..."
+`;
+
+validateBtn.addEventListener('click', () => {
+    const playbookYaml = editor.value;
+    resultsContainer.innerHTML = ''; // Clear previous results
+
+    let playbook;
+    try {
+        playbook = jsyaml.load(playbookYaml);
+        addResult('success', 'YAML Syntax OK', 'Playbook parsed successfully.');
+    } catch (e) {
+        addResult('error', 'YAML Syntax Error', e.message);
+        return; // Stop validation if YAML is invalid
+    }
+    
+    if (!playbook || typeof playbook !== 'object') {
+        addResult('error', 'Invalid Playbook', 'The document is not a valid YAML object.');
+        return;
+    }
+
+    // --- Start Advanced Validation Logic ---
+    addResult('success', 'Starting Policy Validation', `Found ${playbook.steps.length} steps to validate.`);
+
+    playbook.steps.forEach((step, index) => {
+        const stepName = step.name || `Unnamed Step ${index + 1}`;
+        const plugin = step.plugin;
+        const params = step.parameters || {};
+        let isSafe = true;
+
+        if (plugin && plugin.includes("isolate-endpoint")) {
+            const policy = SAFETY_POLICIES.critical_asset_check;
+            const target = params.endpoint_id;
+            if (target && policy.targets.includes(target)) {
+                addResult('error', `Step "${stepName}" VIOLATES policy!`, `[${policy.type}] ${policy.message} Target: ${target}`);
+                isSafe = false;
+            }
+        }
+        
+        if (plugin && plugin.includes("block-ip")) {
+            const policy = SAFETY_POLICIES.corporate_ip_check;
+            const target = params.ip_address;
+            if (target && policy.targets.includes(target)) {
+                addResult('error', `Step "${stepName}" VIOLATES policy!`, `[${policy.type}] ${policy.message} Target: ${target}`);
+                isSafe = false;
+            }
+        }
+        
+        if(isSafe) {
+            addResult('success', `Step "${stepName}" PASSED`, 'No safety policy violations found.');
+        }
+    });
+});
+
+function addResult(type, title, message) {
+    const resultDiv = document.createElement('div');
+    resultDiv.className = `result ${type}`;
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'result-title';
+    titleSpan.textContent = `[${type.toUpperCase()}] ${title}`;
+    
+    const messageP = document.createElement('p');
+    messageP.textContent = message;
+    messageP.style.margin = '0.5rem 0 0 0';
+
+    resultDiv.appendChild(titleSpan);
+    resultDiv.appendChild(messageP);
+    resultsContainer.appendChild(resultDiv);
+}
+
+</script>
+</body>
+</html>
